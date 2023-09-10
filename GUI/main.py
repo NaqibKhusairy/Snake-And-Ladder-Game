@@ -1,39 +1,109 @@
+import tkinter as tk
 import random
 
-snake = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 98: 78}
-ladder = {3: 11, 22: 28, 42: 59, 49: 52, 66: 69, 76: 90, 83: 87, 88: 91, 90: 99}
+ROWS = 10
+COLUMNS = 10
+NUM_CELLS = ROWS * COLUMNS
+PORTAL = {3, 5, 7, 9, 11, 14, 16, 18, 22, 25, 27, 30, 31, 36, 38, 42, 44, 47, 49, 51, 
+53, 56, 60, 62, 64, 67, 71, 73, 75, 78, 80, 84, 87, 91, 93, 95, 97, 99}
 
-def RollDice(player_num):
-    print("-------------------------------------")
-    input("Player " + str(player_num) + " Turn: Press Enter to Roll ")
-    print("-------------------------------------")
-    roll_num = random.randint(1, 6)
-    print("You rolled: ", roll_num)
-    return roll_num
+PLAYER_COLORS = ["red", "blue", "green", "orange"]
 
-BilPlayer = int(input("Please Insert The Number Of Players: "))
-positions = {}
+root = tk.Tk()
+root.title("Snake and Ladders")
 
-for player in range(1, BilPlayer + 1):
-    positions[player] = 0
+canvas = tk.Canvas(root, width=400, height=400)
+canvas.pack()
 
-while True:
-    for player in range(1, BilPlayer + 1):
-        roll_num = RollDice(player)
-        positions[player] += roll_num
+players = [0] * 4
 
-        if positions[player] in snake:
-            print("Player " + str(player) + " landed on a snake ")
-            positions[player] = snake[positions[player]]
-        elif positions[player] in ladder:
-            print("Player " + str(player) + " landed on a ladder ")
-            positions[player] = ladder[positions[player]]
+# Load snake and ladder images
+snake_image = tk.PhotoImage(file="src/portal.gif")
+ladder_image = tk.PhotoImage(file="src/portal.gif")
 
-        if positions[player] == 100:
-            print("Player " + str(player) + " You Are Now At: " + str(positions[player]))
-            print("Player " + str(player) + " has won!")
-            exit()
-        elif positions[player] > 100:
-            extrapos = positions[player] - 100
-            positions[player] = 100 - extrapos
-        print("Player " + str(player) + " You Are Now At: " + str(positions[player]))
+def draw_board():
+    cell_width = 40
+    cell_height = 40
+
+    for row in range(ROWS):
+        for col in range(COLUMNS):
+            x1, y1 = col * cell_width, row * cell_height
+            x2, y2 = x1 + cell_width, y1 + cell_height
+            canvas.create_rectangle(x1, y1, x2, y2, fill="white")
+            cell_num = row * COLUMNS + col + 1
+
+            if cell_num in PORTAL:
+                canvas.create_image((x1 + x2) / 2, (y1 + y2) / 2, image=snake_image, tags="snakes")
+            elif cell_num in PORTAL:
+                canvas.create_image((x1 + x2) / 2, (y1 + y2) / 2, image=ladder_image, tags="ladders")
+            
+            canvas.create_text((x1 + x2) / 2, (y1 + y2) / 2, text=str(cell_num))
+
+def roll_dice(player_position, player_index):
+    result = random.randint(1, 6)
+    result_label = result_labels[player_index]
+    if({player_index} == {0}):
+        plyr = 4
+    else:
+        plyr = player_index
+    result_label.config(text=f"Player {plyr} Roll "+str(result))
+    move_player(result, player_index)
+    next_turn(player_index)
+
+def move_player(steps, player_index):
+    players[player_index] += steps
+    if players[player_index] in SNAKES:
+        players[player_index] = SNAKES[players[player_index]]
+    elif players[player_index] in LADDERS:
+        players[player_index] = LADDERS[players[player_index]]
+    
+    if players[player_index] >= NUM_CELLS:
+        players[player_index] = NUM_CELLS  # Ensure the player doesn't go past the last cell
+        result_label.config(text=f"Player {player_index + 1} wins!")
+
+    update_player_position(player_index)
+
+def update_player_position(player_index):
+    canvas.delete(f"player{player_index}")
+    cell_width = 40
+    cell_height = 40
+    cell_num = players[player_index] - 1
+
+    row = cell_num // COLUMNS
+    col = cell_num % COLUMNS
+
+    x1, y1 = col * cell_width + 5, row * cell_height + 5
+    x2, y2 = x1 + cell_width - 10, y1 + cell_height - 10
+
+    canvas.create_oval(x1, y1, x2, y2, fill=PLAYER_COLORS[player_index], tags=f"player{player_index}")
+
+def next_turn(current_player):
+    roll_buttons[current_player].pack_forget()
+    result_labels[current_player].pack_forget()
+    current_player = (current_player + 1) % len(players)
+    roll_buttons[current_player].pack()
+    result_labels[current_player].pack()
+
+roll_buttons = []
+for i in range(len(players)):
+    roll_buttons.append(tk.Button(root, text=f"Player {i + 1} Roll Dice", command=lambda i=i: roll_dice(players[i], i)))
+    if i != 0:
+        roll_buttons[i].pack_forget()
+    else:
+        roll_buttons[i].pack()
+
+result_labels = []
+for i in range(len(players)):
+    result_labels.append(tk.Label(root, text=f"Dice: "))
+    if i != 0:
+        result_labels[i].pack_forget()
+    else:
+        result_labels[i].pack()
+
+draw_board()
+for i in range(len(players)):
+    update_player_position(i)
+
+current_player = 0
+
+root.mainloop()
